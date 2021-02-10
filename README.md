@@ -18,6 +18,8 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
 5. [Quarkus - ConvertBody](#workshop-quarkus-convertbody)
 6. [Spring Boot - Split](#workshop-springboot-split)
 7. [Quarkus - Split](#workshop-quarkus-split)
+8. [Spring Boot - Content Based Routing](#workshop-springboot-cbr)
+9. [Quarkus - Content Based Routing](#workshop-springboot-cbr)
 
 ## Implementação
 
@@ -722,3 +724,351 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
   2,Michael,Jordan
   3,Vinicius,Martinez
   ```
+
+### 8 - Spring - Content Based Routing <a name="workshop-spring-cbr">
+
+* Crie uma classe **CBRRoute** com o seguinte conteúdo:
+
+  ```
+  package br.com.impacta.camel.springboot.helloworld;
+
+  import org.apache.camel.builder.RouteBuilder;
+  import org.springframework.stereotype.Component;
+
+  @Component
+  public class CBRRoute extends RouteBuilder {
+      @Override
+      public void configure() throws Exception {
+          from("file:/tmp/input/pedidos")
+              .choice()
+                  .when(xpath("/Order/Country='USA'"))
+                      .log("Pedido USA Found")
+                      .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+                      .to("file:/tmp/output/pedidos/usa")
+                  .when(xpath("/Order/Country='UK'"))
+                      .log("Pedido UK Found")
+                      .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+                      .to("file:/tmp/output/pedidos/uk")
+                  .otherwise()
+                      .log("Pedido Default")
+                      .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+                      .to("file:/tmp/output/pedidos/default")
+              .end();
+      }
+  }
+  ```
+
+* Crie três arquivos no diretório *src/main/resources/pedidos* com o seguinte conteúdo:
+
+  ```
+  -- arquivo 1
+  <Order>
+      <Number>22222</Number>
+      <Country>UK</Country>
+      <Amount>22222</Amount>
+      <Items>
+          <ItemID>22222</ItemID>
+          <ItemCost>22.00</ItemCost>
+      </Items>
+  </Order>
+
+  -- arquivo 2
+  <Order>
+      <Number>123456</Number>
+      <Country>USA</Country>
+      <Amount>676332</Amount>
+      <Items>
+          <ItemID>12345</ItemID>
+          <ItemCost>44.00</ItemCost>
+          <ItemQty>1</ItemQty>
+      </Items>
+  </Order>
+
+  -- arquivo 3
+  <Order>
+      <Number>3333</Number>
+      <Country>BRASIL</Country>
+      <Amount>3333</Amount>
+      <Items>
+          <ItemID>3333</ItemID>
+          <ItemQty>3</ItemQty>
+      </Items>
+  </Order>
+  ```
+
+* Copie os arquivos presentes no diretório **resources/pedidos** para o diretório **/tmp/input/pedidos**: `cp source/springboot/helloworld/src/main/resources/pedidos/pedido* /tmp/input/pedidos`
+
+
+* Verifique que os arquivos foram processados e direcionados para o diretório adequado:
+  ```
+  2021-02-10 10:10:01.843  INFO 12662 --- [           main] b.c.i.c.s.h.HelloworldApplication        : Started HelloworldApplication in 1.807 seconds (JVM running for 2.39)
+  2021-02-10 10:10:02.841  INFO 12662 --- [timer://example] route3                                   : Hello World
+  2021-02-10 10:10:29.941  INFO 12662 --- [p/input/pedidos] route1                                   : Pedido UK Found
+  2021-02-10 10:10:29.942  INFO 12662 --- [p/input/pedidos] route1                                   : FileName: pedido-uk.xml Content: <Order>
+      <Number>22222</Number>
+      <Country>UK</Country>
+      <Amount>22222</Amount>
+      <Items>
+          <ItemID>22222</ItemID>
+          <ItemCost>22.00</ItemCost>
+      </Items>
+  </Order>
+  2021-02-10 10:10:29.953  INFO 12662 --- [p/input/pedidos] route1                                   : Pedido USA Found
+  2021-02-10 10:10:29.953  INFO 12662 --- [p/input/pedidos] route1                                   : FileName: pedido-usa.xml Content: <Order>
+      <Number>123456</Number>
+      <Country>USA</Country>
+      <Amount>676332</Amount>
+      <Items>
+          <ItemID>12345</ItemID>
+          <ItemCost>44.00</ItemCost>
+          <ItemQty>1</ItemQty>
+      </Items>
+  </Order>
+  2021-02-10 10:10:29.959  INFO 12662 --- [p/input/pedidos] route1                                   : Pedido Default
+  2021-02-10 10:10:29.959  INFO 12662 --- [p/input/pedidos] route1                                   : FileName: pedido.xml Content: <Order>
+      <Number>3333</Number>
+      <Country>BRASIL</Country>
+      <Amount>3333</Amount>
+      <Items>
+          <ItemID>3333</ItemID>
+          <ItemQty>3</ItemQty>
+      </Items>
+  </Order>
+
+  tree /tmp/output/pedidos
+  /tmp/output/pedidos
+  ├── default
+  │   └── pedido.xml
+  ├── uk
+  │   └── pedido-uk.xml
+  └── usa
+      └── pedido-usa.xml
+
+  3 directories, 3 files
+  ```
+
+* Altere **CBRRoute** com o seguinte conteúdo:
+
+  ```
+  package br.com.impacta.camel.springboot.helloworld;
+
+  import org.apache.camel.builder.RouteBuilder;
+
+  public class CBRRoute extends RouteBuilder {
+      @Override
+      public void configure() throws Exception {
+          from("file:/tmp/input/pedidos")
+              .choice()
+                .when(xpath("/Order/Country='USA'"))
+                  .log("Pedido USA Found")
+                  .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+                  .to("rabbitmq://localhost:5672/quarkus-orders-us.exchange?queue=quarkus-orders-us")
+              .when(xpath("/Order/Country='UK'"))
+                  .log("Pedido UK Found")
+                  .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+                  .to("rabbitmq://localhost:5672/quarkus-orders-uk.exchange?queue=quarkus-orders-uk")
+              .otherwise()
+                  .log("Pedido Default")
+                  .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+                  .to("rabbitmq://localhost:5672/quarkus-orders.exchange?queue=quarkus-orders")
+              .end();
+      }
+  }
+  ```
+
+* Altere o **pom.xml** adicionando a dependência do RabbitMQ:
+
+  ```
+  <dependency>
+  	<groupId>org.apache.camel.springboot</groupId>
+  	<artifactId>camel-rabbitmq-starter</artifactId>
+  	<version>3.7.2</version>
+	</dependency>
+  ```
+
+* Inicie o serviço de mensageria: `docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management`
+
+* Repita o processo anterior de envio de mensagens: `cp source/springboot/helloworld/src/main/resources/pedidos/pedido* /tmp/input/pedidos`
+
+* Acesse a interface do *RabbitMQ* e valide o envio de mensagens:
+
+  ```
+  http://localhost:15672/#/queues
+  guest guest
+  ```
+
+### 9 - Quarkus - Content Based Routing <a name="workshop-quarkus-cbr">
+
+* Adicione a seguinte dependência no arquivo **pom.xml**:
+
+  ```
+  <dependency>
+    <groupId>org.apache.camel.quarkus</groupId>
+    <artifactId>camel-quarkus-xpath</artifactId>
+  </dependency>
+  ```
+
+* Crie uma classe **CBRRoute** com o seguinte conteúdo:
+
+  ```
+  package br.com.impacta.camel.quarkus.helloworld;
+
+  import org.apache.camel.builder.RouteBuilder;
+
+  public class CBRRoute extends RouteBuilder {
+      @Override
+      public void configure() throws Exception {
+          from("file:/tmp/input/pedidos")
+              .choice()
+                  .when(xpath("/Order/Country='USA'"))
+                      .log("Pedido USA Found")
+                      .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+                      .to("file:/tmp/output/pedidos/usa")
+                  .when(xpath("/Order/Country='UK'"))
+                      .log("Pedido UK Found")
+                      .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+                      .to("file:/tmp/output/pedidos/uk")
+                  .otherwise()
+                      .log("Pedido Default")
+                      .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+                      .to("file:/tmp/output/pedidos/default")
+              .end();
+      }
+  }
+  ```
+
+* Crie três arquivos no diretório *src/main/resources/pedidos* com o seguinte conteúdo:
+
+  ```
+  -- arquivo 1
+  <Order>
+      <Number>22222</Number>
+      <Country>UK</Country>
+      <Amount>22222</Amount>
+      <Items>
+          <ItemID>22222</ItemID>
+          <ItemCost>22.00</ItemCost>
+      </Items>
+  </Order>
+
+  -- arquivo 2
+  <Order>
+      <Number>123456</Number>
+      <Country>USA</Country>
+      <Amount>676332</Amount>
+      <Items>
+          <ItemID>12345</ItemID>
+          <ItemCost>44.00</ItemCost>
+          <ItemQty>1</ItemQty>
+      </Items>
+  </Order>
+
+  -- arquivo 3
+  <Order>
+      <Number>3333</Number>
+      <Country>BRASIL</Country>
+      <Amount>3333</Amount>
+      <Items>
+          <ItemID>3333</ItemID>
+          <ItemQty>3</ItemQty>
+      </Items>
+  </Order>
+  ```
+
+* Copie os arquivos presentes no diretório **resources/pedidos** para o diretório **/tmp/input/pedidos**: `cp source/quarkus/helloworld/src/main/resources/pedidos/pedido* /tmp/input-quarkus/pedidos`
+
+
+* Verifique que os arquivos foram processados e direcionados para o diretório adequado:
+
+  ```
+  2021-02-10 10:39:19,167 INFO  [route2] (Camel (camel-1) thread #0 - file:///tmp/input-quarkus/pedidos) Pedido UK Found
+  2021-02-10 10:39:19,168 INFO  [route2] (Camel (camel-1) thread #0 - file:///tmp/input-quarkus/pedidos) FileName: pedido-uk.xml Content: <Order>
+      <Number>22222</Number>
+      <Country>UK</Country>
+      <Amount>22222</Amount>
+      <Items>
+          <ItemID>22222</ItemID>
+          <ItemCost>22.00</ItemCost>
+      </Items>
+  </Order>
+  2021-02-10 10:39:19,179 INFO  [route2] (Camel (camel-1) thread #0 - file:///tmp/input-quarkus/pedidos) Pedido USA Found
+  2021-02-10 10:39:19,179 INFO  [route2] (Camel (camel-1) thread #0 - file:///tmp/input-quarkus/pedidos) FileName: pedido-usa.xml Content: <Order>
+      <Number>123456</Number>
+      <Country>USA</Country>
+      <Amount>676332</Amount>
+      <Items>
+          <ItemID>12345</ItemID>
+          <ItemCost>44.00</ItemCost>
+          <ItemQty>1</ItemQty>
+      </Items>
+  </Order>
+  2021-02-10 10:39:19,187 INFO  [route2] (Camel (camel-1) thread #0 - file:///tmp/input-quarkus/pedidos) Pedido Default
+  2021-02-10 10:39:19,187 INFO  [route2] (Camel (camel-1) thread #0 - file:///tmp/input-quarkus/pedidos) FileName: pedido.xml Content: <Order>
+      <Number>3333</Number>
+      <Country>BRASIL</Country>
+      <Amount>3333</Amount>
+      <Items>
+          <ItemID>3333</ItemID>
+          <ItemQty>3</ItemQty>
+      </Items>
+  </Order>
+
+  tree /tmp/output-quarkus/pedidos
+  /tmp/output/pedidos
+  ├── default
+  │   └── pedido.xml
+  ├── uk
+  │   └── pedido-uk.xml
+  └── usa
+      └── pedido-usa.xml
+
+  3 directories, 3 files
+  ```
+
+* Altere **CBRRoute** com o seguinte conteúdo:
+
+  ```
+  package br.com.impacta.camel.camel.helloworld;
+
+  import org.apache.camel.builder.RouteBuilder;
+
+  public class CBRRoute extends RouteBuilder {
+      @Override
+      public void configure() throws Exception {
+          from("file:/tmp/input/pedidos")
+              .choice()
+                .when(xpath("/Order/Country='USA'"))
+                  .log("Pedido USA Found")
+                  .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+                  .to("rabbitmq://localhost:5672/quarkus-orders-us.exchange?queue=quarkus-orders-us")
+              .when(xpath("/Order/Country='UK'"))
+                  .log("Pedido UK Found")
+                  .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+                  .to("rabbitmq://localhost:5672/quarkus-orders-uk.exchange?queue=quarkus-orders-uk")
+              .otherwise()
+                  .log("Pedido Default")
+                  .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+                  .to("rabbitmq://localhost:5672/quarkus-orders.exchange?queue=quarkus-orders")
+              .end();
+      }
+  }
+  ```
+
+* Altere o **pom.xml** adicionando a dependência do RabbitMQ:
+
+  ```
+  <dependency>
+    <groupId>org.apache.camel.quarkus</groupId>
+    <artifactId>camel-quarkus-rabbitmq</artifactId>
+  </dependency>
+  ```
+
+* Inicie o serviço de mensageria: `docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management`
+
+* Repita o processo anterior de envio de mensagens: `cp source/quarkus/helloworld/src/main/resources/pedidos/pedido* /tmp/input-quarkus/pedidos`
+
+* Acesse a interface do *RabbitMQ* e valide o envio de mensagens:
+
+  ```
+  http://localhost:15672/#/queues
+  guest
