@@ -18,7 +18,9 @@ public class CBRRoute extends RouteBuilder {
                 .otherwise()
                     .log("Pedido Default")
                     .log("FileName: ${in.header.CamelFileName} Content: ${body}")
-                    .to("rabbitmq://localhost:5672/quarkus-orders.exchange?queue=quarkus-orders")
+                    .filter().xpath("/Order/Amount>10000")
+                    .log("FileName: ${in.header.CamelFileName} Content: ${body} will be Dispatched to RabbitMQ")
+                    .to("rabbitmq://localhost:5672/spring-orders.exchange?queue=spring-orders")
                 .end();
     }
 }

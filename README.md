@@ -1,4 +1,4 @@
-# Kubernetes
+# Camel
 
 Neste repositório estarão disponíveis nosso *Workshop* de implementação fazendo uso da tecnologia [Apache Camel](https://camel.apache.org/)
 
@@ -19,7 +19,9 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
 6. [Spring Boot - Split](#workshop-springboot-split)
 7. [Quarkus - Split](#workshop-quarkus-split)
 8. [Spring Boot - Content Based Routing](#workshop-springboot-cbr)
-9. [Quarkus - Content Based Routing](#workshop-springboot-cbr)
+9. [Quarkus - Content Based Routing](#workshop-quarkus-cbr)
+10. [Spring Boot - Filter](#workshop-springboot-filter)
+11. [Quarkus - Filter](#workshop-quarkus-filter)
 
 ## Implementação
 
@@ -1072,3 +1074,74 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
   ```
   http://localhost:15672/#/queues
   guest
+  ```
+
+### 10 - Spring Boot - Filter <a name="workshop-springboot-filter">
+
+* Altere o método **Configure** adicionando o seguinte conteúdo:
+
+  ```
+  from("file:/tmp/input/pedidos")
+    .choice()
+        .when(xpath("/Order/Country='USA'"))
+          .log("Pedido USA Found")
+          .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+          .to("rabbitmq://localhost:5672/spring-orders-us.exchange?queue=spring-orders-us")
+        .when(xpath("/Order/Country='UK'"))
+          .log("Pedido UK Found")
+          .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+          .to("rabbitmq://localhost:5672/spring-orders-uk.exchange?queue=spring-orders-uk")
+        .otherwise()
+          .log("Pedido Default")
+          .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+          .filter().xpath("/Order/Amount>10000")
+          .log("FileName: ${in.header.CamelFileName} Content: ${body} will be Dispatched to RabbitMQ")
+          .to("rabbitmq://localhost:5672/spring-orders.exchange?queue=spring-orders")
+    .end();
+  ```
+
+* Inicie o serviço de mensageria: `docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management`
+
+* Repita o processo anterior de envio de mensagens: `cp source/springboot/helloworld/src/main/resources/pedidos/pedido* /tmp/input/pedidos`
+
+* Acesse a interface do *RabbitMQ* e valide o envio de mensagens:
+
+  ```
+  http://localhost:15672/#/queues
+  guest
+  ```
+
+### 11 - Quarkus - Filter <a name="workshop-quarkus-filter">
+
+* Altere o método **Configure** adicionando o seguinte conteúdo:
+
+  ```
+  from("file:/tmp/input/pedidos")
+    .choice()
+        .when(xpath("/Order/Country='USA'"))
+          .log("Pedido USA Found")
+          .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+          .to("rabbitmq://localhost:5672/spring-orders-us.exchange?queue=spring-orders-us")
+        .when(xpath("/Order/Country='UK'"))
+          .log("Pedido UK Found")
+          .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+          .to("rabbitmq://localhost:5672/spring-orders-uk.exchange?queue=spring-orders-uk")
+        .otherwise()
+          .log("Pedido Default")
+          .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+          .filter().xpath("/Order/Amount>10000")
+          .log("FileName: ${in.header.CamelFileName} Content: ${body} will be Dispatched to RabbitMQ")
+          .to("rabbitmq://localhost:5672/spring-orders.exchange?queue=spring-orders")
+    .end();
+  ```
+
+* Inicie o serviço de mensageria: `docker run -it --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management`
+
+* Repita o processo anterior de envio de mensagens: `cp source/quarkus/helloworld/src/main/resources/pedidos/pedido* /tmp/input-quarkus/pedidos`
+
+* Acesse a interface do *RabbitMQ* e valide o envio de mensagens:
+
+  ```
+  http://localhost:15672/#/queues
+  guest
+  ```  
