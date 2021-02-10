@@ -16,6 +16,8 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
 3. [Quarkus - File](#workshop-quarkus-file)
 4. [Spring Boot - ConvertBody](#workshop-springboot-convertbody)
 5. [Quarkus - ConvertBody](#workshop-quarkus-convertbody)
+6. [Spring Boot - Split](#workshop-springboot-split)
+7. [Quarkus - Split](#workshop-quarkus-split)
 
 ## Implementação
 
@@ -420,8 +422,8 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
 
   ```
   <dependency>
-      <groupId>org.apache.camel.quarkus</groupId>
-      <artifactId>camel-quarkus-bean</artifactId>
+    <groupId>org.apache.camel.quarkus</groupId>
+    <artifactId>camel-quarkus-bean</artifactId>
   </dependency>
   ```
 
@@ -470,4 +472,253 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
   THIS IS MY LOWER CASE MESSAGE
   ```
 
-* Execute o projeto através do comando: `mvn quarkus:dev`
+### 6 - Spring - Split <a name="workshop-spring-split">
+
+* Altere o arquivo *pom.xml* do projeto adicionando a seguinte extensão:
+  ```
+  <dependency>
+    <groupId>org.apache.camel.springboot</groupId>
+    <artifactId>camel-bindy-starter</artifactId>
+    <version>3.7.2</version>
+  </dependency>
+  ```
+
+* Crie a classe **Customer** com o seguinte conteúdo:
+
+  ```
+  package br.com.impacta.camel.springboot.helloworld;
+
+  import org.apache.camel.dataformat.bindy.annotation.CsvRecord;
+  import org.apache.camel.dataformat.bindy.annotation.DataField;
+
+  @CsvRecord(separator = ",")
+  public class Customer {
+
+      @DataField(pos = 1)
+      private long customerId;
+      @DataField(pos = 2)
+      private String firstName;
+      @DataField(pos = 3)
+      private String lastName;
+
+      @Override
+      public String toString() {
+          return "Customer [customerId=" + customerId + ", firstName=" + firstName + ", lastName=" + lastName + "]";
+      }
+
+      @Override
+      public int hashCode() {
+          final int prime = 31;
+          int result = 1;
+          result = prime * result + (int) (customerId ^ (customerId >>> 32));
+          return result;
+      }
+      @Override
+      public boolean equals(Object obj) {
+          if (this == obj)
+              return true;
+          if (obj == null)
+              return false;
+          if (getClass() != obj.getClass())
+              return false;
+          Customer other = (Customer) obj;
+          if (customerId != other.customerId)
+              return false;
+          return true;
+      }
+
+      public long getCustomerId() {
+          return customerId;
+      }
+      public void setCustomerId(long customerId) {
+          this.customerId = customerId;
+      }
+      public String getFirstName() {
+          return firstName;
+      }
+      public void setFirstName(String firstName) {
+          this.firstName = firstName;
+      }
+      public String getLastName() {
+          return lastName;
+      }
+      public void setLastName(String lastName) {
+          this.lastName = lastName;
+      }
+
+  }
+  ```
+
+* Crie a classe **CustomerBean** com o seguinte conteúdo:
+
+  ```
+  package br.com.impacta.camel.springboot.helloworld;
+
+  import org.apache.camel.Exchange;
+  import org.springframework.stereotype.Component;
+
+  import java.util.List;
+
+  @Component
+  public class CustomerBean {
+
+      public void printClass(Exchange exchange) {
+          List<Customer> customerList = (List<Customer>)exchange.getIn().getBody(List.class);
+          customerList.stream().forEach(customer ->
+                  System.out.println(
+                      " Customer ID: " + customer.getCustomerId() +
+                      " Customer First Name: " + customer.getFirstName() +
+                      " Customer Last Name: " + customer.getLastName()
+                  )
+          );
+      }
+  }
+  ```
+
+* Altere o método **Configure** da classe **FileRoute** com o seguinte conteúdo:
+
+  ```
+  @Override
+  public void configure() throws Exception {
+      BindyCsvDataFormat csvDataFormat = new BindyCsvDataFormat(Customer.class);
+
+      from("file:/tmp/input")
+          .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+          .split(body().tokenize("/n")).unmarshal(csvDataFormat)
+          .log("Reading File Line >> ${body}")
+          .convertBodyTo(Customer[].class)
+          .bean(CustomerBean.class, "printClass");
+  }
+  ```
+
+* Crie um arquivo (e.g players.txt) com o conteúdo abaixo e mova o mesmo para o diretório */tmp/input*:
+
+  ```
+  1,Kobe,Bryant
+  2,Michael,Jordan
+  3,Vinicius,Martinez
+  ```
+
+### 7 - Quarkus - Split <a name="workshop-quarkus-convertbody">
+
+* Altere o arquivo *pom.xml* do projeto adicionando a seguinte extensão:
+  ```
+  <dependency>
+    <groupId>org.apache.camel.quarkus</groupId>
+    <artifactId>camel-quarkus-bindy</artifactId>
+  </dependency>
+  ```
+
+* Crie a classe **Customer** com o seguinte conteúdo:
+
+  ```
+  package br.com.impacta.camel.quarkus.helloworld;
+
+  import org.apache.camel.dataformat.bindy.annotation.CsvRecord;
+  import org.apache.camel.dataformat.bindy.annotation.DataField;
+
+  @CsvRecord(separator = ",")
+  public class Customer {
+
+      @DataField(pos = 1)
+      private long customerId;
+      @DataField(pos = 2)
+      private String firstName;
+      @DataField(pos = 3)
+      private String lastName;
+
+      @Override
+      public String toString() {
+          return "Customer [customerId=" + customerId + ", firstName=" + firstName + ", lastName=" + lastName + "]";
+      }
+
+      @Override
+      public int hashCode() {
+          final int prime = 31;
+          int result = 1;
+          result = prime * result + (int) (customerId ^ (customerId >>> 32));
+          return result;
+      }
+      @Override
+      public boolean equals(Object obj) {
+          if (this == obj)
+              return true;
+          if (obj == null)
+              return false;
+          if (getClass() != obj.getClass())
+              return false;
+          Customer other = (Customer) obj;
+          if (customerId != other.customerId)
+              return false;
+          return true;
+      }
+
+      public long getCustomerId() {
+          return customerId;
+      }
+      public void setCustomerId(long customerId) {
+          this.customerId = customerId;
+      }
+      public String getFirstName() {
+          return firstName;
+      }
+      public void setFirstName(String firstName) {
+          this.firstName = firstName;
+      }
+      public String getLastName() {
+          return lastName;
+      }
+      public void setLastName(String lastName) {
+          this.lastName = lastName;
+      }
+
+  }
+  ```
+
+* Crie a classe **CustomerBean** com o seguinte conteúdo:
+
+  ```
+  package br.com.impacta.camel.quarkus.helloworld;
+
+  import org.apache.camel.Exchange;
+
+  import java.util.List;
+
+  public class CustomerBean {
+
+      public void printClass(Exchange exchange) {
+          List<Customer> customerList = (List<Customer>)exchange.getIn().getBody(List.class);
+          customerList.stream().forEach(customer ->
+                  System.out.println(
+                      " Customer ID: " + customer.getCustomerId() +
+                      " Customer First Name: " + customer.getFirstName() +
+                      " Customer Last Name: " + customer.getLastName()
+                  )
+          );
+      }
+  }
+  ```
+
+* Altere o método **Configure** da classe **FileRoute** com o seguinte conteúdo:
+
+  ```
+  @Override
+  public void configure() throws Exception {
+      BindyCsvDataFormat csvDataFormat = new BindyCsvDataFormat(Customer.class);
+
+      from("file:/tmp/input-quarkus")
+          .log("FileName: ${in.header.CamelFileName} Content: ${body}")
+          .split(body().tokenize("/n")).unmarshal(csvDataFormat)
+          .log("Reading File Line >> ${body}")
+          .convertBodyTo(Customer[].class)
+          .bean(CustomerBean.class, "printClass");
+  }
+  ```
+
+* Crie um arquivo (e.g players.txt) com o conteúdo abaixo e mova o mesmo para o diretório */tmp/input*:
+
+  ```
+  1,Kobe,Bryant
+  2,Michael,Jordan
+  3,Vinicius,Martinez
+  ```
