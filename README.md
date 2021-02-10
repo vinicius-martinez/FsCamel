@@ -414,7 +414,7 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
   THIS IS MY LOWER CASE MESSAGE
   ```
 
-### 5 - Quarkus - File <a name="workshop-quarkus-convertbody">
+### 5 - Quarkus - ConvertBody <a name="workshop-quarkus-convertbody">
 
 * Altere o arquivo *pom.xml* do projeto adicionando a seguinte extensão:
 
