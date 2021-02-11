@@ -22,6 +22,7 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
 9. [Quarkus - Content Based Routing](#workshop-quarkus-cbr)
 10. [Spring Boot - Filter](#workshop-springboot-filter)
 11. [Quarkus - Filter](#workshop-quarkus-filter)
+12. [Spring Boot - Customer API](#workshop-springboot-customer-api)
 
 ## Implementação
 
@@ -1144,4 +1145,137 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
   ```
   http://localhost:15672/#/queues
   guest
-  ```  
+  ```
+
+### 12 - Spring Boot - Customer API <a name="workshop-springboot-customer-api">
+
+* Incluir as seguintes dependências no **pom.xml**:
+
+  ```
+  <dependency>
+  	<groupId>org.apache.camel.springboot</groupId>
+  	<artifactId>camel-rest-starter</artifactId>
+  	<version>3.7.2</version>
+  </dependency>
+  <dependency>
+  	<groupId>org.apache.camel.springboot</groupId>
+  	<artifactId>camel-undertow-starter</artifactId>
+  	<version>3.7.2</version>
+  </dependency>
+  <dependency>
+  	<groupId>org.apache.camel.springboot</groupId>
+  	<artifactId>camel-jackson-starter</artifactId>
+  	<version>3.7.2</version>
+  </dependency>
+  ```
+
+* Criar a classe **CustomerService** com o seguinte conteúdo:
+
+  ```
+  package br.com.impacta.camel.springboot.helloworld;
+
+  import org.springframework.stereotype.Component;
+
+  import java.util.HashSet;
+  import java.util.Set;
+
+  @Component
+  public class CustomerService {
+
+      private static Set<Customer> customerSet = new HashSet<Customer>(0);
+
+      public Customer addCustomer(Customer customer){
+          if (customerSet.contains(customer)){
+              for (Customer customerEntity : customerSet) {
+                  if (customerEntity.equals(customer)){
+                      return customerEntity;
+                  }
+              }
+          }
+          customerSet.add(customer);
+          return customer;
+      }
+
+      public Customer getCustomer(Long customerid){
+          Customer customer = new Customer();
+          customer.setCustomerId(customerid);
+          if (customerSet.contains(customer)){
+              for (Customer customerEntity : customerSet) {
+                  if (customerEntity.equals(customer)){
+                      return customerEntity;
+                  }
+              }
+          }
+          return null;
+      }
+      public Set<Customer> listCustomer(){
+          return customerSet;
+      }
+
+      public Customer deleteCustomer(Long customerid){
+          Customer customer = new Customer();
+          customer.setCustomerId(customerid);
+          if (customerSet.contains(customer)){
+              customerSet.remove(customer);
+              return customer;
+          }
+          return null;
+      }
+
+      public Customer updateCustomer(Customer customer){
+          if (customerSet.contains(customer)){
+              for (Customer customerEntity : customerSet) {
+                  if (customerEntity.equals(customer)){
+                      customerEntity.setCustomerId(customer.getCustomerId());
+                      customerEntity.setFirstName(customer.getFirstName());
+                      customerEntity.setLastName(customer.getLastName());
+                      customerSet.remove(customer);
+                      customerSet.add(customerEntity);
+                      return customerEntity;
+                  }
+              }
+          }
+          return null;
+      }
+
+  }
+  ```
+
+* Criar a classe **CustomerRoute** com o seguinte conteúdo:
+
+  ```
+  package br.com.impacta.camel.springboot.helloworld;
+
+  import org.apache.camel.builder.RouteBuilder;
+  import org.apache.camel.model.rest.RestBindingMode;
+  import org.springframework.beans.factory.annotation.Autowired;
+  import org.springframework.stereotype.Component;
+
+  @Component
+  public class CustomerRoute extends RouteBuilder {
+
+      @Autowired
+      CustomerService customerService;
+
+      @Override
+      public void configure() throws Exception {
+          restConfiguration().host("localhost").port(8080).bindingMode(RestBindingMode.json);
+          rest("/customers")
+              .post("/").consumes("application/json").type(Customer.class).route().bean(customerService, "addCustomer(${body})").endRest()
+              .get("/").produces("application/json").route().bean(customerService, "listCustomer").endRest()
+              .get("/{id}").route().bean(customerService, "getCustomer(${header.id})").endRest()
+              .put("/").consumes("application/json").type(Customer.class).route().bean(customerService, "updateCustomer(${body})").endRest()
+              .delete("/{id}").produces("application/json").route().bean(customerService, "deleteCustomer(${header.id})").endRest();
+      }
+  }
+  ```
+
+* Teste da API:
+
+  ```
+  http :8080/customers
+  http POST :8080/customers customerId=1111 firstName=nome1 lastName=sobrenome1
+  http PUT :8080/customers customerId=1111 firstName=nome1ALTERADO lastName=sobrenome1UPDATE
+  http POST :8080/customers customerId=2222 firstName=nome2 lastName=sobrenome2
+  http DELETE :8080/customers/2222
+  ```
