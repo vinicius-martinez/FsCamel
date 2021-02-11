@@ -270,7 +270,7 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
   2021-02-09 23:30:59,310 INFO  [route1] (Camel (camel-1) thread #0 - timer://example) Hello World
   ```
 
-### 2 - Spring - File <a name="workshop-spring-file">
+### 2 - Spring - File <a name="workshop-springboot-file">
 
 * Crie a classe **FileRoute** com o seguinte conteúdo:
 
@@ -375,7 +375,7 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
   20210209114424.txt.done
   ```
 
-### 4 - Spring - ConvertBody <a name="workshop-spring-convertbody">
+### 4 - Spring - ConvertBody <a name="workshop-springboot-convertbody">
 
 * Altere o método **Configure** da classe **FileRoute** com o seguinte conteúdo:
 
@@ -477,7 +477,7 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
   THIS IS MY LOWER CASE MESSAGE
   ```
 
-### 6 - Spring - Split <a name="workshop-spring-split">
+### 6 - Spring - Split <a name="workshop-springboot-split">
 
 * Altere o arquivo *pom.xml* do projeto adicionando a seguinte extensão:
   ```
@@ -728,7 +728,7 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
   3,Vinicius,Martinez
   ```
 
-### 8 - Spring - Content Based Routing <a name="workshop-spring-cbr">
+### 8 - Spring - Content Based Routing <a name="workshop-springboot-cbr">
 
 * Crie uma classe **CBRRoute** com o seguinte conteúdo:
 
@@ -1277,5 +1277,7 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
   http POST :8080/customers customerId=1111 firstName=nome1 lastName=sobrenome1
   http PUT :8080/customers customerId=1111 firstName=nome1ALTERADO lastName=sobrenome1UPDATE
   http POST :8080/customers customerId=2222 firstName=nome2 lastName=sobrenome2
+  http :8080/customers
   http DELETE :8080/customers/2222
+  http :8080/customers
   ```
