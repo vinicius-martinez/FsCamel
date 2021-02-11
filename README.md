@@ -178,7 +178,7 @@ Neste repositório estarão disponíveis nosso *Workshop* de implementação faz
 
 ### 1 - Quarkus - Hello World <a name="workshop-quarkus-helloworld">
 
-* Acesse o [Spring Boot Initializer](https://start.spring.io/) e gere um projeto com as seguintes informações:
+* Acesse o [Code Quarkus](https://code.quarkus.io/) e gere um projeto com as seguintes informações:
 
   ```
   Group: br.com.impacta.camel.quarkus
